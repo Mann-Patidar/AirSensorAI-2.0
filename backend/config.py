@@ -1,7 +1,15 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-uri = "mongodb+srv://AirSensorAI:AirSensonAI@airsensor-ai.ex0eua9.mongodb.net/?appName=AirSensor-AI"
+ROOT_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT_DIR / ".env")
+
+uri = os.getenv("MONGODB_URI")
+if not uri:
+    raise ValueError("MONGODB_URI is not set. Add it to a .env file or export it in your shell.")
 
 # Create a new client with optimized connection pooling
 client = MongoClient(
