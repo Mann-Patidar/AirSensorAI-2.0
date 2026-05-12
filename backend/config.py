@@ -28,3 +28,6 @@ client = MongoClient(
 db = client.todo_db
 
 collection_name = db["sensor_data"]
+
+
+API_KEY = os.getenv("OPENWEATHER_API_KEY")

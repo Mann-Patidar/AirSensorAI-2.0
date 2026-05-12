@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
 from database.schemas import list_data
-from config import collection_name
+from config import collection_name, API_KEY
 from models.esp32_input import esp32_input
 import models
 from bson import ObjectId
+import requests
+
 
 router = APIRouter()
 
@@ -67,3 +69,30 @@ async def update_data(id : str, inp: esp32_input):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update data: {str(e)}")
 
+
+@router.get("/wheather_api/{city}")
+def data(city : str):
+    try:
+        url = "https://api.openweathermap.org/data/2.5/weather"
+
+        params = {
+            "q": city,
+            "appid": API_KEY,
+            "units": "metric"
+        }
+
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        if response.status_code != 200:
+            return "Weather data not found."
+
+        temp = data["main"]["temp"]
+        humidity = data["main"]["humidity"]
+
+        return {
+            "temp" : str(temp),
+            "humidity" : str(humidity)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch data: {str(e)}")
