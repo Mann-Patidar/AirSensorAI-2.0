@@ -1,36 +1,15 @@
 from fastapi import APIRouter, HTTPException, Query
 from database.schemas import list_data
+from services.prediction import predict_aqi
 from config import collection_name, API_KEY
 from models.esp32_input import esp32_input, all_input
-import models
+from models.predict import AQIData
 from bson import ObjectId
 from datetime import datetime
 import requests
-from pydantic import BaseModel
-from services.prediction import predict_aqi
-
 
 router = APIRouter()
 
-# Request body format
-class AQIData(BaseModel):
-    mq135: float
-    temperature: float
-    humidity: float
-
-# Prediction endpoint
-@router.post("/predict")
-def predict(data: AQIData):
-
-    predicted_aqi = predict_aqi(
-        data.mq135,
-        data.temperature,
-        data.humidity
-    )
-
-    return {
-        'status': 'OK'
-    }
 
 @router.get('/')
 def home():
@@ -129,3 +108,16 @@ async def update_data(id : str, inp: esp32_input):
         raise HTTPException(status_code=500, detail=f"Failed to update data: {str(e)}")
 
 
+# Prediction endpoint
+@router.post("/predict")
+def predict(data: AQIData):
+
+    predicted_aqi = predict_aqi(
+        data.mq135,
+        data.temperature,
+        data.humidity
+    )
+
+    return {
+        'status': 'OK'
+    }
