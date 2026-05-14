@@ -1,83 +1,69 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
-// 🔹 WiFi credentials
-const char *ssid = "muskan";
-const char *password = "muskan346";
+const char* ssid = "muskan";
+const char* password = "muskan346";
+const char* serverName = "http://192.168.137.206:8000/add_data";
 
-// 🔹 Your FastAPI endpoint (UPDATED with your IP)
-const char *serverName = "http://192.168.137.206:8000/add_data";
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-// 🔹 AQI value
 float aqi = 0.0;
 
-void setup()
-{
-    Serial.begin(115200);
+void setup() {
+  Serial.begin(115200);
 
-    // 🔹 Connect to WiFi
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi");
+  Wire.begin(21, 22);
 
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        Serial.print(".");
-    }
+  lcd.init();
+  lcd.backlight();
 
-    Serial.println("\n✅ Connected to WiFi!");
-    Serial.print("ESP32 IP Address: ");
-    Serial.println(WiFi.localIP());
+  lcd.setCursor(0, 0);
+  lcd.print("Connecting...");
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+
+  lcd.clear();
+  lcd.print("WiFi Connected");
+  delay(2000);
 }
 
-void loop()
-{
+void loop() {
+  aqi = random(50, 200);
 
-    // 🔹 Simulate AQI (replace later with sensor)
-    aqi = random(50, 200) / 1.0;
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("AQI: ");
+  lcd.print(aqi);
 
-    if (WiFi.status() == WL_CONNECTED)
-    {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
 
-        HTTPClient http;
+    lcd.setCursor(0, 1);
+    lcd.print("Sending...");
 
-        Serial.println("\n🔄 Sending request...");
-        Serial.print("AQI Value: ");
-        Serial.println(aqi);
+    http.begin(serverName);
+    http.addHeader("Content-Type", "application/json");
 
-        http.begin(serverName);
-        http.addHeader("Content-Type", "application/json");
+    String jsonData = "{\"aqi\": " + String(aqi) + "}";
 
-        // 🔹 JSON data
-        String jsonData = "{\"aqi\": " + String(aqi) + "}";
+    int httpResponseCode = http.POST(jsonData);
 
-        Serial.print("JSON Sent: ");
-        Serial.println(jsonData);
+    lcd.clear();
 
-        // 🔹 Send POST request
-        int httpResponseCode = http.POST(jsonData);
-
-        // 🔹 Response handling
-        Serial.print("HTTP Response Code: ");
-        Serial.println(httpResponseCode);
-
-        if (httpResponseCode > 0)
-        {
-            String response = http.getString();
-            Serial.print("Server Response: ");
-            Serial.println(response);
-        }
-        else
-        {
-            Serial.println("❌ Error sending request");
-        }
-
-        http.end();
-    }
-    else
-    {
-        Serial.println("❌ WiFi Disconnected");
+    if (httpResponseCode > 0) {
+      lcd.print("Sent OK");
+    } else {
+      lcd.print("Send Failed");
     }
 
-    delay(5000); // send every 5 seconds
+    http.end();
+  }
+
+  delay(5000);
 }
