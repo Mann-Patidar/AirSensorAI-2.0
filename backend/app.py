@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from backend.routes.route import router
+from routes.route import router
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 

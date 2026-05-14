@@ -6,6 +6,8 @@ import models
 from bson import ObjectId
 from datetime import datetime
 import requests
+from pydantic import BaseModel
+from services.prediction import predict_aqi
 
 
 router = APIRouter()
