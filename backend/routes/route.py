@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query
 from database.schemas import list_data
 from config import collection_name, API_KEY
-from models.esp32_input import esp32_input
+from models.esp32_input import esp32_input, all_input
 import models
 from bson import ObjectId
+from datetime import datetime
 import requests
 
 
@@ -55,37 +56,8 @@ async def get_data(limit: int = Query(100, le=1000), skip: int = Query(0, ge=0))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {str(e)}")
 
-@router.post('/add_data')
-async def add_data(data : esp32_input):
-    try:
-        result = collection_name.insert_one(dict(data))
-        return {
-            "status_code": 201,
-            "message": "Data added successfully",
-            "inserted_id": str(result.inserted_id)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to add data: {str(e)}")
-
-@router.put('/{id}')
-async def update_data(id : str, inp: esp32_input):
-    try:
-        id = ObjectId(id)
-        # Use find_one to check if document exists
-        curr_doc = collection_name.find_one({"_id": id})
-        if not curr_doc:
-            raise HTTPException(status_code=404, detail="Data not found")
-        collection_name.update_one({"_id": id}, {"$set": dict(inp)})
-        return {"status_code": 200, "message": "Data Updated successfully"}
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update data: {str(e)}")
-
-
 @router.get("/wheather_api/{city}")
-def data(city : str):
+def weather_data(city : str):
     try:
         url = "https://api.openweathermap.org/data/2.5/weather"
 
@@ -110,3 +82,48 @@ def data(city : str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {str(e)}")
+
+#new endpoint for esp32 + weather api data
+@router.post('/add_all_data')
+async def add_all_data(data : all_input):
+    try:
+        result = collection_name.insert_one(dict(data))
+        return {
+            "status_code": 201,
+            "message": "Data added successfully",
+            "inserted_id": str(result.inserted_id)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add data: {str(e)}")
+
+@router.post('/add_data')
+async def add_data(data : esp32_input):
+    temp_humidity = weather_data("Bhopal")
+    date_time = datetime.now()
+
+    all_data = {
+        "aqi" : data.aqi,
+        "temp": float(temp_humidity["temp"]),
+        "humidity": float(temp_humidity["humidity"]),
+        "date_time" : date_time
+    }
+    await add_all_data(all_input(**all_data))
+
+
+@router.put('/{id}')
+async def update_data(id : str, inp: esp32_input):
+    try:
+        id = ObjectId(id)
+        # Use find_one to check if document exists
+        curr_doc = collection_name.find_one({"_id": id})
+        if not curr_doc:
+            raise HTTPException(status_code=404, detail="Data not found")
+        collection_name.update_one({"_id": id}, {"$set": dict(inp)})
+        return {"status_code": 200, "message": "Data Updated successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update data: {str(e)}")
+
+
